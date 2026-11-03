@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ImageGenerator from "./components/image-generator";
 
 export default function Home() {
   const [count, setCount] = useState<number | null>(null);
@@ -80,7 +81,9 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen flex-col items-center gap-8 bg-zinc-50 p-8 dark:bg-black">
-      <div className="w-full max-w-xl">
+      <ImageGenerator />
+
+      <div className="w-full max-w-xl border-t border-zinc-200 pt-8 dark:border-zinc-800">
         <h2 className="text-xl font-bold text-black dark:text-zinc-50">
           /api/online 即時線上人數
         </h2>
