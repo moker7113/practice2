@@ -1,6 +1,7 @@
-// 這支 API 接收前端傳來的圖片描述文字（以及可選的參考圖片），呼叫 OpenAI 產生動漫卡通風格的圖片
+// 這支 API 接收前端傳來的圖片描述文字、風格（以及可選的參考圖片），呼叫 OpenAI 產生指定風格的圖片
 // - 只有文字：呼叫文生圖 API（/v1/images/generations）
 // - 文字 + 圖片：呼叫圖片編輯 API（/v1/images/edits），以上傳的圖片為基礎結合文字描述生成
+import { DEFAULT_STYLE_ID, findImageStyle } from "@/app/lib/image-styles";
 
 // 使用的 OpenAI 圖片模型
 const MODEL = "gpt-image-2";
@@ -22,10 +23,18 @@ export async function POST(request: Request) {
   const description = form.get("description");
   // 取出使用者上傳的圖片（沒上傳時會是 null）
   const image = form.get("image");
+  // 取出使用者選擇的風格 id（沒帶的話用預設風格）
+  const styleId = form.get("style") ?? DEFAULT_STYLE_ID;
 
   // 檢查描述是否存在、是不是字串、去除空白後是否為空，任一不符就回傳 400 錯誤
   if (typeof description !== "string" || !description.trim()) {
     return Response.json({ error: "請輸入圖片描述" }, { status: 400 });
+  }
+
+  // 風格只接受清單內的 id，避免從前端塞入任意提示詞
+  const style = typeof styleId === "string" ? findImageStyle(styleId) : undefined;
+  if (!style) {
+    return Response.json({ error: "不支援的圖片風格" }, { status: 400 });
   }
 
   // 有上傳圖片的話，檢查格式與大小
@@ -51,10 +60,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    // 在使用者描述後面統一加上風格指定，讓每次生成都是動漫卡通風格
+    // 在使用者描述後面加上所選風格的提示詞
     const prompt = hasImage
-      ? `以這張圖片為基礎：${description}，動漫卡通風格，日系動畫插畫，鮮豔色彩，乾淨線條`
-      : `${description}，動漫卡通風格，日系動畫插畫，鮮豔色彩，乾淨線條`;
+      ? `以這張圖片為基礎：${description}，${style.prompt}`
+      : `${description}，${style.prompt}`;
 
     let openaiRes: Response;
 

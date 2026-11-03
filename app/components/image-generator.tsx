@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { DEFAULT_STYLE_ID, IMAGE_STYLES, type ImageStyleId } from "@/app/lib/image-styles";
 
 // 允許上傳的圖片格式與大小上限（需與 /api/image 後端一致）
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -11,6 +12,8 @@ const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export default function ImageGenerator() {
   // 使用者輸入的圖片描述
   const [description, setDescription] = useState("");
+  // 使用者選擇的圖片風格
+  const [style, setStyle] = useState<ImageStyleId>(DEFAULT_STYLE_ID);
   // 使用者上傳的參考圖片（可選）
   const [refImage, setRefImage] = useState<File | null>(null);
   // 參考圖片的預覽網址（用 URL.createObjectURL 產生）
@@ -66,6 +69,7 @@ export default function ImageGenerator() {
       // 用 FormData 才能同時送出文字與圖片檔
       const body = new FormData();
       body.append("description", description);
+      body.append("style", style);
       if (refImage) body.append("image", refImage);
 
       const res = await fetch("/api/image", { method: "POST", body });
@@ -88,14 +92,35 @@ export default function ImageGenerator() {
   return (
     <div className="w-full max-w-xl">
       <h2 className="text-xl font-bold text-black dark:text-zinc-50">
-        /api/image AI 動漫風格繪圖
+        /api/image AI 繪圖
       </h2>
       <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-        描述一段你想要的畫面，也可以再放一張參考圖片，AI 會以圖片為基礎結合你的文字，
-        生成一張動漫卡通風格的圖片（生成需要一點時間，請耐心等候）。
+        描述一段你想要的畫面並選擇風格，也可以再放一張參考圖片，AI 會以圖片為基礎結合你的文字
+        生成圖片（生成需要一點時間，請耐心等候）。
       </p>
 
       <div className="mt-4 flex flex-col gap-4">
+        {/* 風格選擇 */}
+        <div role="radiogroup" aria-label="圖片風格" className="flex flex-wrap gap-2">
+          {IMAGE_STYLES.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              role="radio"
+              aria-checked={style === s.id}
+              onClick={() => setStyle(s.id)}
+              disabled={loading}
+              className={`rounded-full px-4 py-1.5 text-sm transition-colors disabled:opacity-50 ${
+                style === s.id
+                  ? "bg-black text-white dark:bg-white dark:text-black"
+                  : "bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
