@@ -24,6 +24,8 @@ export default function ImageGenerator() {
   const [loading, setLoading] = useState(false);
   // 生成成功後的圖片網址（可能是 data URL 或一般 URL）
   const [imageUrl, setImageUrl] = useState("");
+  // 產生這張圖時所選的風格（用於下載檔名，避免生成後切換風格造成檔名不符）
+  const [imageStyle, setImageStyle] = useState<ImageStyleId>(DEFAULT_STYLE_ID);
   // 錯誤訊息（例如沒輸入文字、圖片格式不對、OpenAI 呼叫失敗等）
   const [error, setError] = useState("");
 
@@ -59,6 +61,24 @@ export default function ImageGenerator() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // 下載生成好的圖片
+  // 先把圖片轉成 Blob 再下載：data URL 與一般網址都適用，且跨網域網址也不會只是開新分頁
+  const handleDownload = async () => {
+    const filename = `ai-image-${imageStyle}-${Date.now()}.png`;
+    try {
+      const blob = await (await fetch(imageUrl)).blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      // 若圖片網址不允許跨網域讀取，就改成開新分頁讓使用者自行另存
+      window.open(imageUrl, "_blank", "noopener");
+    }
+  };
+
   const handleGenerate = async () => {
     // 送出前先清掉上一次的結果與錯誤訊息
     setError("");
@@ -82,6 +102,7 @@ export default function ImageGenerator() {
       }
 
       setImageUrl(data.imageUrl);
+      setImageStyle(style);
     } catch (err) {
       setError(err instanceof Error ? err.message : "發生未知錯誤");
     } finally {
@@ -207,12 +228,20 @@ export default function ImageGenerator() {
         </div>
 
         {imageUrl && (
-          // eslint-disable-next-line @next/next/no-img-element -- data URL 來自 base64，不需要 next/image 的最佳化
-          <img
-            src={imageUrl}
-            alt={description}
-            className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800"
-          />
+          <div className="flex flex-col gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element -- data URL 來自 base64，不需要 next/image 的最佳化 */}
+            <img
+              src={imageUrl}
+              alt={description}
+              className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800"
+            />
+            <button
+              onClick={handleDownload}
+              className="self-start rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
+            >
+              ⬇ 下載圖片
+            </button>
+          </div>
         )}
       </div>
     </div>
